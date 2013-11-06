@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+from socket import *
+sock = socket(AF_INET, SOCK_STREAM)
+sock.connect(('localhost',12345))
+print('server zei:', sock.recv(32).strip())
+sock.send(b'Bedankt!\n')
+sock.close

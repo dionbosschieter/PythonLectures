@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+
+from socket import *
+sock=socket(AF_INET, SOCK_STREAM)
+#sock.setsockopt(IPPROTO_IP, IP_MULTICAST_TTL, 20)
+sock.bind(('',12345))
+sock.listen(5)
+newfd, address=sock.accept()
+print("iemand is verbondern:", address)
+newfd.sendall(b'Thanks for saying hi, answer: 42!\n')
+data=newfd.recv(32)
+print("client sent us:",data.strip())
+sock.close()

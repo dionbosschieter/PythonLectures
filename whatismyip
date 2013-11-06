@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import urllib.request
+f=urllib.request.urlopen('http://checkip.dyndns.org/')
+htmldata = str(f.read(128))
+splitdata = htmldata.split(':')[1].split(' ')[1].split('<')[0]
+print(splitdata)
+f.close()
