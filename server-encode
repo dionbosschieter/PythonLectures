@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import codecs
+from socket import *
+
+def decodePacket(packet,enc):
+	return packet.decode(enc)
+
+def encodePacket(message,enc):
+	return message.encode(enc)
+
+sock=socket(AF_INET, SOCK_STREAM)
+
+sock.bind(('',12345))
+sock.listen(5)
+newfd, address=sock.accept()
+
+print("Connected:", address)
+encoding=newfd.recv(32).decode()
+
+try:
+	codecs.lookup(encoding)
+	print("Encoding in:", encoding)
+	newfd.sendall(b'OK!')
+	data=decodePacket(newfd.recv(512),encoding) # decode packet
+	newfd.sendall(encodePacket(data,encoding))	# encode packet
+except LookupError:
+	print('Encoding type bestaat niet')
+
+sock.close()

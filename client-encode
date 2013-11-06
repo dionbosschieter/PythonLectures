@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+from socket import *
+sock = socket(AF_INET, SOCK_STREAM)
+sock.connect(('localhost',12345))
+#print('server zei:', sock.recv(32).strip())
+encoding = 'utf-8'
+sock.send(encoding.encode('utf-8'))
+
+print('Server:', sock.recv(32).strip().decode())
+sock.send(b'dit is de tekst die je moet encoden')
+
+print('Server:', sock.recv(512).strip().decode('utf-8'))
+sock.close
