@@ -2,19 +2,18 @@
 
 import os
 import time
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Lock
 
 usage = """[*]Author: Dion Bosschieter
 [*]Gebruik: ./calc.py 
 Geef een berekening op in de vorm '<getal1> <operator> <getal2>', 
- typ 'clear' om het scherm te legen of 'einde' om te stoppen:
- """
+ typ 'clear' om het scherm te legen of 'einde' om te stoppen:"""
 
-def consumer(q):
+def consumer(q, l):
 	while True:
 
 		if q.empty():
-			time.sleep(0.5)	# als de input niks is slaap
+			time.sleep(0.05)	# als de input niks is slaap
 			continue		# dan een seconde en ga weer verder
 		else: 
 			arr = q.get(False)
@@ -29,7 +28,7 @@ def consumer(q):
 				getal2 = int(arr[2])
 				output = arr[0] + " " +  arr[1] + " " + arr[2] + " = "
 			except ValueError:
-				consumerprint("dit zijn geen getallen")
+				consumerprint("dit zijn geen getallen", l)
 				continue
 			
 			if operator in ("+","-","*","/","^"):
@@ -44,27 +43,43 @@ def consumer(q):
 				elif operator == "^":
 					output += str(getal1 ** getal2)
 
-				consumerprint(output) #print berekening op het scherm
+				consumerprint(output, l) #print berekening op het scherm
 			else:
-				consumerprint("die operator ken ik niet!")
+				consumerprint("die operator ken ik niet!", l)
+		else: 
+			consumerprint("Fout: geef een berekening op in de vorm '<getal1> <operator> <getal2>", l)
 
-def consumerprint(msg):
+def consumerprint(msg, l):
+	l.acquire()
 	print("Consumer: ",msg)
+	l.release()
+
+def mainprint(msg, l):
+	l.acquire()
+	print(msg)
+	l.release()
 
 if __name__ == '__main__':
-	print(usage)
-
+	
 	val1 = ""
 	q = Queue()
-	p = Process(target=consumer, args=(q,))
+	l = Lock()
+	p = Process(target=consumer, args=(q,l))
 	p.start()
 
-	while True:
-		val1 = input()
+	mainprint(usage, l)
 
+	while True:
+		val1 = input("")
+		
 		if(val1 in ("einde","quit","exit")): break
-		if(val1 in ("clear","cls","clearscreen")): os.system("clear")
-		q.put(val1.split(' '), False)
+		if(val1 in ("clear","cls","clearscreen")): os.system("clear"); continue
+		if(val1 == ""): continue
+
+		# als de queue leeg is plaats berekening
+		# geef dit anders weer op het scherm
+		if q.empty(): q.put(val1.split(' '), False)
+		else: mainprint("Consumer moet de vorige berekening nog uitvoeren",l)
 
 	q.put("einde") # vertel andere thread om te sluiten
 	p.join() # wacht op andere thread
