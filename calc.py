@@ -2,25 +2,28 @@
 
 import os
 import time
+import sys
 from multiprocessing import Process, Queue, Lock
 
 usage = """[*]Author: Dion Bosschieter
-[*]Gebruik: ./calc.py 
-Geef een berekening op in de vorm '<getal1> <operator> <getal2>', 
- typ 'clear' om het scherm te legen of 'einde' om te stoppen:"""
+[*]Gebruik: ./calc.py sommen.txt
+De berekeningen worden gelezen uit de file 'sommen.txt'
+Read  (P): 6 + 4
+Write (C): 6 + 4 = 10
+Alle sommen zijn verwerkt, einde programma.
+"""
 
-def consumer(q, l):
+def consumer(cq,mq):
 	while True:
-
-		if q.empty():
-			time.sleep(0.05)	# als de input niks is slaap
-			continue		# dan een seconde en ga weer verder
+		
+		if cq.empty(): #check queue zodat we geen exception krijgen
+			continue
 		else: 
-			arr = q.get(False)
+			arr = cq.get(False)
 
-		if arr=="einde": #voor het netjes afsluiten van de thread
+		if arr=="exit": #voor het netjes afsluiten van de thread
 			break
-		elif len(arr) == 3: #als er 3 waardes zijn opgegeven, check of de 2de waarde een operator is 
+		if len(arr) == 3: #als er 3 waardes zijn opgegeven, check of de 2de waarde een operator is 
 			operator = arr[1]
 			
 			try:
@@ -43,43 +46,50 @@ def consumer(q, l):
 				elif operator == "^":
 					output += str(getal1 ** getal2)
 
-				consumerprint(output, l) #print berekening op het scherm
+				consumerprint(output,mq) #print berekening op het scherm
 			else:
-				consumerprint("die operator ken ik niet!", l)
+				consumerprint("die operator ken ik niet!",mq)
 		else: 
-			consumerprint("Fout: geef een berekening op in de vorm '<getal1> <operator> <getal2>", l)
+			consumerprint("Fout: geef een berekening op in de vorm '<getal1> <operator> <getal2>",mq)
 
-def consumerprint(msg, l):
-	l.acquire()
-	print("Consumer: ",msg)
-	l.release()
+def monitor(mq):
+	while True:
+		if mq.empty() != True:
+			msg = mq.get(False)
+			if msg == "exit":
+				break
+			print(msg)
 
-def mainprint(msg, l):
-	l.acquire()
-	print(msg)
-	l.release()
+def consumerprint(msg,mq):
+	mq.put(("Consumer: "+msg),False)
 
 if __name__ == '__main__':
 	
-	val1 = ""
-	q = Queue()
-	l = Lock()
-	p = Process(target=consumer, args=(q,l))
-	p.start()
+	if(len(sys.argv) < 2):
+		print(usage)
+		quit()
 
-	mainprint(usage, l)
+	filename = sys.argv[1]
 
-	while True:
-		val1 = input("")
-		
-		if(val1 in ("einde","quit","exit")): break
-		if(val1 in ("clear","cls","clearscreen")): os.system("clear"); continue
-		if(val1 == ""): continue
+	cq = Queue()
+	mq = Queue()
 
-		# als de queue leeg is plaats berekening
-		# geef dit anders weer op het scherm
-		if q.empty(): q.put(val1.split(' '), False)
-		else: mainprint("Consumer moet de vorige berekening nog uitvoeren",l)
+	cp = Process(target=consumer, args=(cq,mq,))
+	mp = Process(target=monitor, args=(mq,))
+	mp.start()
+	cp.start()
 
-	q.put("einde") # vertel andere thread om te sluiten
-	p.join() # wacht op andere thread
+	#open ZEH file
+	f = open(filename,'r')
+	lines = f.read().splitlines()
+	for line in lines:
+		mq.put(("Read (P): "+line), False)
+		cq.put(line.split(' '),False)
+
+	f.close()
+
+	#cleanup
+	cq.put("exit") # vertel andere thread om te sluiten
+	cp.join() # wacht op thread
+	mq.put("exit") # vertel thread om te sluiten
+	mp.join() # wacht op thread
