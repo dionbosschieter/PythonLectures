@@ -3,7 +3,8 @@
 import os
 import time
 import sys
-from multiprocessing import Process, Queue, Lock
+from threading import Thread
+from queue import Queue
 
 usage = """[*]Author: Dion Bosschieter
 [*]Gebruik: ./calc.py [bestandsnaam] [aantalthreads]
@@ -18,17 +19,15 @@ Alle sommen zijn verwerkt, einde programma.
 def consumer(cq,mq,thrdn):
 	while True:
 		
-		try:
-			arr = cq.get(False)
-		except:
-			#queue is empty
-			continue
-
-		if arr=="exit": #voor het netjes afsluiten van de thread
-			cq.put_nowait("exit") # vertel de "mogelijk" volgende thread om te sluiten
-			mq.put_nowait("[*]Stopping consumer-thread["+str(thrdn+1)+"]") #geef aan dat je stopt
+		qitem = cq.get()
+		#time.sleep(0.0001)
+	
+		if qitem=="exit": #check if this thread can shutdown
+			mq.put_nowait("[*]Stopping consumer-thread["+str(thrdn+1)+"]") #shutdown message
 			break
-		if len(arr) == 3: #als er 3 waardes zijn opgegeven, check of de 2de waarde een operator is 
+		else:
+			arr = qitem.split(' ')
+		if len(arr) == 3: #if 3 values, check if 2nd value is an operator
 			operator = arr[1]
 			
 			try:
@@ -59,11 +58,10 @@ def consumer(cq,mq,thrdn):
 
 def monitor(mq):
 	while True:
-		if mq.empty() != True:
-			msg = mq.get(False)
-			if msg == "exit":
-				break
-			print(msg)
+		msg = mq.get()
+		if msg == "exit":
+			break
+		print(msg)
 
 def consumerprint(msg,mq,thrdn):
 	mq.put_nowait("Consumer["+str(thrdn+1)+"]: "+msg)
@@ -89,7 +87,7 @@ if __name__ == '__main__':
 		quit()
 	
 	#check if a threadcount argument is given
-		#check if the given argument is a digit
+	#check if the given argument is a digit
 	#else threadcount = 1
 	if(len(sys.argv) < 3 ):
 		threadcount = 1
@@ -99,33 +97,41 @@ if __name__ == '__main__':
 	elif(sys.argv[2].isdigit()):
 		threadcount = int(sys.argv[2])
 
-	print("De berekeningen worden gelezen uit de file ", filename)
+	print("De berekeningen worden gelezen uit de file", filename)
 	print("Aantal threads", threadcount)
 
-	cq = Queue() #calculator queue
+	cq = [] #calculator queue array
 	mq = Queue() #monitor queue
-	cp = [] #thread array
-	mp = Process(target=monitor, args=(mq,)) #monitor worker(thread)
-	mp.start()
+	ct = [] #thread array
+	mp = Thread(target=monitor, args=(mq,)) #monitor worker(thread)
 
-
+	#create the Calculator queue(s) and thread(s)
 	for i in range(0,threadcount):
-		mq.put_nowait("[*]Starting consumer-thread: "+str(i+1))
-		cp.append(Process(target=consumer, args=(cq,mq,i,)))
-		cp[i].start()
+		cq.append(Queue())
+		t = Thread(target=consumer, args=(cq[i],mq,i,), daemon=True)
+		ct.append(t)
 
 	#read the file and close it
 	lines = f.read().splitlines()
+	count = 0
 	for line in lines:
-		mq.put_nowait("Read (P): "+line)
-		cq.put_nowait(line.split(' '))
+		mq.put_nowait("Read (P): "+line+" in queue:"+str(count))
+		cq[count].put_nowait(line)
+		count += 1
+		if count == threadcount: count = 0
 	f.close()
 
-	#cleanup
-	cq.put_nowait("exit") # vertel de consumer thread(s) om te sluiten
-
+	#starting thread(s)
 	for i in range(0,threadcount):
-		cp[i].join() # wacht op thread
+		mq.put_nowait("[*] Starting consumer-thread: "+str(i+1))
+		ct[i].start()
+	
+	mp.start() #start de monitor thread
 
+	#cleanup
+	for i in range(0,threadcount):
+		cq[i].put_nowait("exit") # tell the consumer thread(s) to close
+		ct[i].join() # wait for thread
+	
 	mq.put("exit") # vertel de monitor thread om te sluiten
 	mp.join() # wacht op thread
