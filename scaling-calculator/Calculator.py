@@ -18,7 +18,7 @@ from debugconsole import DebugConsole
 from infocontainer import InfoContainer
 
 usage = """[*]Author: Dion Bosschieter
-[*]Gebruik: ./Calculator.py [bestandsnaam] [aantalthreads]
+[*]Usage: ./Calculator.py [filename] [numberofthreads]
 ./Calculator.py sommen.txt 4
 ./Calculator.py sommen.txt
 """
