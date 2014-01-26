@@ -17,6 +17,7 @@ class Monitor(object):
 			try:
 				msg = self.monitorQueue.get(False)
 			except:
+				time.sleep(0.1)
 				self.refresh()
 				continue
 			if msg == "exit":

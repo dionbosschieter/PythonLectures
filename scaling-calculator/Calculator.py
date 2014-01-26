@@ -21,13 +21,12 @@ usage = """[*]Author: Dion Bosschieter
 [*]Gebruik: ./Calculator.py [bestandsnaam] [aantalthreads]
 ./Calculator.py sommen.txt 4
 ./Calculator.py sommen.txt
-
 """
 
 class Calculator(object):
 
 	def __init__(self, stdscreen):
-		
+
 		if(len(sys.argv) < 3 ):
 			self.threadcount = 1
 		elif(sys.argv[2].isdigit()):
