@@ -34,6 +34,9 @@ class Calculator(object):
 
 		self.screen = stdscreen
 		curses.curs_set(0)
+		if(curses.has_colors()):
+			curses.start_color()
+			curses.init_pair(1, curses.COLOR_BLUE, curses.COLOR_CYAN)
 
 		#init of curses
 		title = "Calculator - Dion Bosschieter - Version: 1"

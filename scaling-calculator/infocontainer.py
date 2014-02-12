@@ -40,10 +40,8 @@ class InfoContainer(object):
     def display(self):
         self.panel.top()
         self.panel.show()
-        #self.window.clear()
 
     def hide(self):
-        self.window.clear()
         self.panel.hide()
         panel.update_panels()
         curses.doupdate()

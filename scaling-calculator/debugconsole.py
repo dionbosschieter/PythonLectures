@@ -23,19 +23,18 @@ class DebugConsole(object):
     def display(self):
         self.panel.top()
         self.panel.show()
-        #self.window.clear()
 
     def hide(self):
-        self.window.clear()
         self.panel.hide()
         panel.update_panels()
         curses.doupdate()
 
     def refresh(self):
-        self.window.clear()
+        
+        self.window.refresh()
         self.window.border(0)
         self.window.addstr(0,1,self.title)
-        #draw the last 20 log items
+        #draw the last N items
         #foreach i from 0 till (self.height-2) 
         #draw string on i place
         #self.writebuffer[-(self.height-2):]
@@ -49,8 +48,9 @@ class DebugConsole(object):
             maxlength = lengthofbuffer
 
         for i in range(0, maxlength):
-            #self.window.addstr(i,1,str(i))
-            self.window.addstr(i+1,1,self.writebuffer[i+startindex])
+            logitem = self.writebuffer[i+startindex]
+            whitespace = " "*self.width
+            self.window.addnstr(i+1,1,logitem+whitespace, self.width-2)
 
         self.window.refresh()
         curses.doupdate()
